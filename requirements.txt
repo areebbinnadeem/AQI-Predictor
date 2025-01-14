@@ -1,3 +1,9 @@
+hopsworks
 pandas
 numpy
+requests
+scikit-learn
+xgboost
+Flask
+Streamlit
 -e .
