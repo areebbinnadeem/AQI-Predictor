@@ -7,4 +7,3 @@ xgboost
 Flask
 Streamlit
 python-dotenv
--e .
