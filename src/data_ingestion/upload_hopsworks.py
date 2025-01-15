@@ -2,8 +2,8 @@ import os
 import pandas as pd
 import hopsworks
 from dotenv import load_dotenv
-from app.exception import AppException
-from app.logger import get_logger
+from src.app.exception import AppException
+from src.app.logger import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         logger.info("Starting data upload to Hopsworks...")
 
         # File path to the AQI CSV file
-        file_path = "src/data_ingestion/historical_aqi.csv"
+        file_path = "historical_aqi.csv"
 
         # Feature group details
         feature_group_name = "historical_aqi_data"

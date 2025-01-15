@@ -4,8 +4,8 @@ import streamlit as st
 from flask import Flask, request, jsonify
 from threading import Thread
 from dotenv import load_dotenv
-from app.logger import get_logger
-from app.exception import AppException
+from src.app.logger import get_logger
+from src.app.exception import AppException
 from prediction.predict_aqi import predict_next_three_days_aqi
 
 # Load environment variables

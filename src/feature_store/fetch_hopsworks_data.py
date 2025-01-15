@@ -2,8 +2,8 @@ import os
 import pandas as pd
 from dotenv import load_dotenv
 import hopsworks
-from app.exception import AppException
-from app.logger import get_logger
+from src.app.exception import AppException
+from src.app.logger import get_logger
 
 # Initialize the logger
 logger = get_logger(__name__)

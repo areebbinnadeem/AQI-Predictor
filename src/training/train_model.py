@@ -8,8 +8,8 @@ import os
 import pandas as pd
 from preprocess import load_and_preprocess
 from feature_store.fetch_hopsworks_data import fetch_data_from_hopsworks
-from app.exception import AppException
-from app.logger import get_logger
+from src.app.exception import AppException
+from src.app.logger import get_logger
 
 logger = get_logger(__name__)
 
