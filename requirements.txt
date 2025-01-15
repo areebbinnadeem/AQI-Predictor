@@ -7,3 +7,4 @@ xgboost
 Flask
 Streamlit
 python-dotenv
+confluent-kafka
