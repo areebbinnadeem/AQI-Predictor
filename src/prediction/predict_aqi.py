@@ -22,7 +22,9 @@ model_registry = project.get_model_registry()
 
 # Retrieve the model by name and version
 model_name = "XGB_Model"
-model_version = model_registry.get_model(name=model_name, version=1)
+model_metadata = model_registry.get_models(name=model_name)
+latest_version = max(model_metadata.keys())
+model_version = model_registry.get_model(name=model_name, version=latest_version)
 model_dir = model_version.download()
 
 # Find and load the model
@@ -31,7 +33,6 @@ model_path = os.path.join(model_dir, model_file)
 xgb_model = joblib.load(model_path)
 
 
-# Step 2: Fetch historical AQI data
 def get_historical_aqi(lat, lon, start_date, end_date):
     """
     Fetch historical AQI data from OpenWeather API.
@@ -62,8 +63,10 @@ def get_historical_aqi(lat, lon, start_date, end_date):
         return None
 
 
-# Step 3: Create a DataFrame from API data
 def create_dataframe(data):
+    """
+    Create a DataFrame from historical AQI data.
+    """
     records = []
     for entry in data["list"]:
         date = datetime.utcfromtimestamp(entry["dt"]).strftime('%Y-%m-%d %H:%M:%S')
@@ -84,63 +87,71 @@ def create_dataframe(data):
     return pd.DataFrame(records)
 
 
-# Step 4: Main execution
-if __name__ == "__main__":
-    # Example: Fetch recent AQI data for Karachi
-    lat, lon = 24.8607, 67.0011  # Coordinates for Karachi
+def predict_next_three_days_aqi(lat, lon):
+    """
+    Predict AQI for the next three days based on historical data.
+    """
     end_date = datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
 
     historical_aqi = get_historical_aqi(lat, lon, start_date, end_date)
 
-    if historical_aqi:
-        # Create DataFrame and process data
-        pollutants_data = create_dataframe(historical_aqi)
-        pollutants_data['date'] = pd.to_datetime(pollutants_data['date'])
-        pollutants_data.sort_values('date', inplace=True)
-
-        # Generate lagged features
-        for lag in range(1, 4):
-            for col in ['aqi', 'co', 'no', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3']:
-                pollutants_data[f'{col}_lag_{lag}'] = pollutants_data[col].shift(lag)
-
-        recent_data = pollutants_data.dropna().iloc[-1]
-        recent_data['hour'] = recent_data['date'].hour
-
-        # Prepare input for the next three days
-        today = datetime.today()
-        next_three_days = [today + timedelta(days=i) for i in range(1, 4)]
-
-        input_data = pd.DataFrame({
-            'month': [date.month for date in next_three_days],
-            'day': [date.day for date in next_three_days],
-            'day_of_week': [date.weekday() for date in next_three_days]
-        })
-        input_data['hour'] = recent_data['hour']
-
-        for col in recent_data.index:
-            if 'lag' in col:
-                input_data[col] = recent_data[col]
-
-        input_data['is_weekend'] = input_data['day_of_week'].apply(lambda x: 1 if x >= 5 else 0)
-
-        # Add rolling averages
-        for col in ['co', 'no', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3']:
-            input_data[f'{col}_3hr_avg'] = (
-                recent_data[f'{col}_lag_1'] + recent_data[f'{col}_lag_2'] + recent_data[f'{col}_lag_3']
-            ) / 3
-
-        input_data = input_data[xgb_model.feature_names_in_]
-
-        # Predict AQI
-        predicted_aqi = xgb_model.predict(input_data)
-
-        # Display predictions
-        predictions = pd.DataFrame({
-            'Date': [date.strftime('%Y-%m-%d') for date in next_three_days],
-            'Predicted_AQI': predicted_aqi.round()
-        })
-
-        print("\nPredicted AQI for the next three days:\n", predictions)
-    else:
+    if not historical_aqi:
         print("Failed to fetch historical AQI data")
+        return None
+
+    # Create DataFrame and process data
+    pollutants_data = create_dataframe(historical_aqi)
+    pollutants_data['date'] = pd.to_datetime(pollutants_data['date'])
+    pollutants_data.sort_values('date', inplace=True)
+
+    # Generate lagged features
+    for lag in range(1, 4):
+        for col in ['aqi', 'co', 'no', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3']:
+            pollutants_data[f'{col}_lag_{lag}'] = pollutants_data[col].shift(lag)
+
+    recent_data = pollutants_data.dropna().iloc[-1]
+    recent_data['hour'] = recent_data['date'].hour
+
+    # Prepare input for the next three days
+    today = datetime.today()
+    next_three_days = [today + timedelta(days=i) for i in range(1, 4)]
+
+    input_data = pd.DataFrame({
+        'month': [date.month for date in next_three_days],
+        'day': [date.day for date in next_three_days],
+        'day_of_week': [date.weekday() for date in next_three_days]
+    })
+    input_data['hour'] = recent_data['hour']
+
+    for col in recent_data.index:
+        if 'lag' in col:
+            input_data[col] = recent_data[col]
+
+    input_data['is_weekend'] = input_data['day_of_week'].apply(lambda x: 1 if x >= 5 else 0)
+
+    # Add rolling averages
+    for col in ['co', 'no', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3']:
+        input_data[f'{col}_3hr_avg'] = (
+            recent_data[f'{col}_lag_1'] + recent_data[f'{col}_lag_2'] + recent_data[f'{col}_lag_3']
+        ) / 3
+
+    input_data = input_data[xgb_model.feature_names_in_]
+
+    # Predict AQI
+    predicted_aqi = xgb_model.predict(input_data)
+
+    return pd.DataFrame({
+        'Date': [date.strftime('%Y-%m-%d') for date in next_three_days],
+        'Predicted_AQI': predicted_aqi.round()
+    }).to_dict(orient="records")
+
+
+# For Testing
+if __name__ == "__main__":
+    lat, lon = 24.8607, 67.0011  # Coordinates for Karachi
+    predictions = predict_next_three_days_aqi(lat, lon)
+    if predictions:
+        print("\nPredicted AQI for the next three days:")
+        for pred in predictions:
+            print(f"Date: {pred['Date']}, Predicted AQI: {pred['Predicted_AQI']}")
