@@ -12,13 +12,32 @@ from src.app.exception import AppException
 logger = get_logger(__name__)
 
 # Load environment variables
+logger.info("Loading environment variables...")
 load_dotenv()
-HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
-OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 
-if not HOPSWORKS_API_KEY:
-    logger.error("HOPSWORKS_API_KEY is not set in the .env file!")
-    raise ValueError("HOPSWORKS_API_KEY is not set in the .env file!")
+# Function to check if Hopsworks credentials are already available
+def get_hopsworks_api_key():
+    try:
+        # Check if Hopsworks credentials are already set
+        if "HOPSWORKS_API_KEY" in os.environ and os.environ["HOPSWORKS_API_KEY"]:
+            logger.info("Hopsworks API key found in environment.")
+            return os.environ["HOPSWORKS_API_KEY"]
+        else:
+            # If not set, load from .env file
+            logger.info("Hopsworks API key not found in environment. Loading from .env file.")
+            api_key = os.getenv("HOPSWORKS_API_KEY")
+            if not api_key:
+                raise ValueError("HOPSWORKS_API_KEY is not set in the .env file!")
+            return api_key
+    except Exception as e:
+        logger.exception("Failed to retrieve Hopsworks API key.")
+        raise AppException("Error retrieving Hopsworks API key", e)
+
+# Retrieve Hopsworks API key
+HOPSWORKS_API_KEY = get_hopsworks_api_key()
+
+# Ensure OpenWeather API key is available
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
 if not OPENWEATHER_API_KEY:
     logger.error("OPENWEATHER_API_KEY is not set in the .env file!")
     raise ValueError("OPENWEATHER_API_KEY is not set in the .env file!")

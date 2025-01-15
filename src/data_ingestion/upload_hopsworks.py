@@ -17,12 +17,26 @@ def upload_to_hopsworks(file_path, feature_group_name):
         load_dotenv()
         api_key = os.getenv("HOPSWORKS_API_KEY")
 
-        if not api_key:
-            raise AppException("Hopsworks API key not found. Set it in the .env file.")
+        # Attempt to log in with cached credentials first
+        try:
+            logger.info("Attempting to log in with cached credentials...")
+            project = hopsworks.login()
+            logger.info("Successfully logged in using cached credentials.")
+        except Exception as cached_login_error:
+            logger.warning("Cached credentials not found. Falling back to API key login.")
 
-        # Login to Hopsworks
-        logger.info("Logging into Hopsworks...")
-        project = hopsworks.login(api_key_value=api_key)
+            # If no API key is found in the environment, raise an exception
+            if not api_key:
+                raise AppException("Hopsworks API key not found. Set it in the .env file.")
+
+            # Login using the API key
+            try:
+                project = hopsworks.login(api_key=api_key)
+                logger.info("Successfully logged in using API key.")
+            except Exception as api_login_error:
+                logger.error(f"Login failed using API key: {api_login_error}")
+                raise AppException("Failed to authenticate with Hopsworks. Please check your API key or credentials.")
+
         fs = project.get_feature_store()
 
         # Verify the file exists

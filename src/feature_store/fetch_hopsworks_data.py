@@ -17,12 +17,27 @@ def fetch_data_from_hopsworks():
         load_dotenv()
         hopsworks_api_key = os.getenv("HOPSWORKS_API_KEY")
 
-        if not hopsworks_api_key:
-            raise AppException("HOPSWORKS_API_KEY not found in the environment file!")
+        # Attempt to log in without an API key first
+        try:
+            logger.info("Attempting to log in with cached credentials...")
+            project = hopsworks.login()
+            logger.info("Successfully logged in using cached credentials.")
+        except Exception as cached_login_error:
+            logger.warning("Cached credentials not found. Falling back to API key login.")
+            
+            # If API key is not provided in the environment, raise an exception
+            if not hopsworks_api_key:
+                raise AppException("HOPSWORKS_API_KEY not found in the environment file!")
 
-        # Login to Hopsworks
-        logger.info("Logging into Hopsworks...")
-        project = hopsworks.login(api_key=hopsworks_api_key)
+            # Login using the API key
+            try:
+                project = hopsworks.login(api_key=hopsworks_api_key)
+                logger.info("Successfully logged in using API key.")
+            except Exception as api_login_error:
+                logger.error(f"Login failed using API key: {api_login_error}")
+                raise AppException("Failed to authenticate with Hopsworks. Please check your API key or credentials.")
+
+        # Access the feature store
         fs = project.get_feature_store()
 
         # List all feature groups and find the latest version of the target group
