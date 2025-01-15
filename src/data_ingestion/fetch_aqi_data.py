@@ -2,9 +2,17 @@ import requests
 import pandas as pd
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from the .env file
+load_dotenv()
 
 def get_historical_aqi(lat, lon, start_date, end_date):
-    API_KEY = "151c92f247907c3d817537b61b47439c"  
+    # Fetch the API key from the environment variable
+    API_KEY = os.getenv("OPENWEATHER_API_KEY")
+    if not API_KEY:
+        raise ValueError("OpenWeather API key not found. Set it in the .env file.")
+    
     BASE_URL = "https://api.openweathermap.org/data/2.5/air_pollution/history"
 
     # Convert dates to UNIX timestamps
