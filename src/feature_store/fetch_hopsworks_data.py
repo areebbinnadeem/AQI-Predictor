@@ -1,12 +1,21 @@
 import hopsworks
+from dotenv import load_dotenv
+import os
 
 def fetch_data_from_hopsworks():
     """
     Fetch historical AQI data from Hopsworks from the latest version of the feature group.
     """
     try:
+        # Load the API key from the .env file
+        load_dotenv()
+        hopsworks_api_key = os.getenv("HOPSWORKS_API_KEY")
+
+        if not hopsworks_api_key:
+            raise ValueError("HOPSWORKS_API_KEY not found in .env file!")
+
         # Login to Hopsworks
-        project = hopsworks.login()
+        project = hopsworks.login(api_key=hopsworks_api_key)
         fs = project.get_feature_store()
 
         # List all feature groups and find the latest version of the target group
