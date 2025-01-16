@@ -6,7 +6,7 @@ from threading import Thread
 from dotenv import load_dotenv
 from src.app.logger import get_logger
 from src.app.exception import AppException
-from prediction.predict_aqi import predict_next_three_days_aqi
+from src.prediction.predict_aqi import predict_next_three_days_aqi
 
 # Load environment variables
 load_dotenv()

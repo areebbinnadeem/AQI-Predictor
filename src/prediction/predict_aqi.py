@@ -14,44 +14,50 @@ logger = get_logger(__name__)
 # Load environment variables
 logger.info("Loading environment variables...")
 load_dotenv()
-
-# Function to check if Hopsworks credentials are already available
-def get_hopsworks_api_key():
-    try:
-        # Check if Hopsworks credentials are already set
-        if "HOPSWORKS_API_KEY" in os.environ and os.environ["HOPSWORKS_API_KEY"]:
-            logger.info("Hopsworks API key found in environment.")
-            return os.environ["HOPSWORKS_API_KEY"]
-        else:
-            # If not set, load from .env file
-            logger.info("Hopsworks API key not found in environment. Loading from .env file.")
-            api_key = os.getenv("HOPSWORKS_API_KEY")
-            if not api_key:
-                raise ValueError("HOPSWORKS_API_KEY is not set in the .env file!")
-            return api_key
-    except Exception as e:
-        logger.exception("Failed to retrieve Hopsworks API key.")
-        raise AppException("Error retrieving Hopsworks API key", e)
-
-# Retrieve Hopsworks API key
-HOPSWORKS_API_KEY = get_hopsworks_api_key()
-
-# Ensure OpenWeather API key is available
 OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY")
-if not OPENWEATHER_API_KEY:
-    logger.error("OPENWEATHER_API_KEY is not set in the .env file!")
-    raise ValueError("OPENWEATHER_API_KEY is not set in the .env file!")
+
+# Function to check if Hopsworks login requires an API key
+def connect_to_hopsworks():
+    """
+    Connect to Hopsworks, handling both API key and keyless login.
+    """
+    try:
+        logger.info("Attempting to log in to Hopsworks...")
+        HOPSWORKS_API_KEY = os.getenv("HOPSWORKS_API_KEY")
+
+        # Try logging in without API key
+        try:
+            project = hopsworks.login()
+            logger.info("Logged in to Hopsworks without API key.")
+        except TypeError as e:
+            if HOPSWORKS_API_KEY:
+                # Retry logging in with API key if supported
+                logger.info("Retrying Hopsworks login with API key...")
+                project = hopsworks.login(api_key=HOPSWORKS_API_KEY)
+                logger.info("Logged in to Hopsworks using API key.")
+            else:
+                logger.error("HOPSWORKS_API_KEY not found in environment variables!")
+                raise AppException("HOPSWORKS_API_KEY is required but not provided!") from e
+
+        return project
+    except Exception as e:
+        logger.exception("Failed to log in to Hopsworks.")
+        raise AppException("Error in Hopsworks login process", e)
+
 
 # Step 1: Connect to Hopsworks and access the model registry
 try:
-    logger.info("Logging into Hopsworks...")
-    project = hopsworks.login(api_key=HOPSWORKS_API_KEY)
+    project = connect_to_hopsworks()
     model_registry = project.get_model_registry()
 
     # Retrieve the model by name and version
     model_name = "XGB_Model"
     model_metadata = model_registry.get_models(name=model_name)
-    latest_version = max(model_metadata.keys())
+    if not model_metadata:
+        logger.error(f"No models found for name {model_name}.")
+        raise AppException(f"No models found for name {model_name}.")
+    
+    latest_version = max(model_metadata, key=lambda x: x.version).version
     model_version = model_registry.get_model(name=model_name, version=latest_version)
     model_dir = model_version.download()
 
@@ -168,9 +174,39 @@ def predict_next_three_days_aqi(lat, lon):
 
         # Add rolling averages
         for col in ['co', 'no', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3']:
-            input_data[f'{col}_3hr_avg'] = (
-                recent_data[f'{col}_lag_1'] + recent_data[f'{col}_lag_2'] + recent_data[f'{col}_lag_3']
-            ) / 3
+            input_data[f'{col}_3hr_avg'] = (recent_data[f'{col}_lag_1'] + recent_data[f'{col}_lag_2'] + recent_data[f'{col}_lag_3']) / 3
+            input_data[f'{col}_6hr_avg'] = (
+                recent_data[f'{col}_lag_1'] + recent_data[f'{col}_lag_2'] +
+                recent_data[f'{col}_lag_3'] + recent_data.get(f'{col}_lag_4', 0) +
+                recent_data.get(f'{col}_lag_5', 0) + recent_data.get(f'{col}_lag_6', 0)
+            ) / 6
+
+
+        def get_season(month):
+            if month in [12, 1, 2]:
+                return 'Winter'
+            elif month in [3, 4, 5]:
+                return 'Spring'
+            elif month in [6, 7, 8]:
+                return 'Summer'
+            else:
+                return 'Autumn'
+
+        input_data['season'] = input_data['month'].apply(get_season)
+        season_dummies = pd.get_dummies(input_data['season'], prefix='season')
+        for season in ['season_Spring', 'season_Summer', 'season_Autumn', 'season_Winter']:
+            if season not in season_dummies.columns:
+                season_dummies[season] = 0
+        input_data = pd.concat([input_data, season_dummies], axis=1)
+        input_data.drop(columns=['season'], inplace=True)
+
+
+        input_data['co_pm2_5'] = input_data['co_lag_1'] * input_data['pm2_5_lag_1']
+        input_data['no_no2'] = input_data['no_lag_1'] * input_data['no2_lag_1']
+        input_data['o3_pm10'] = input_data['o3_lag_1'] * input_data['pm10_lag_1']
+        input_data['so2_nh3'] = input_data['so2_lag_1'] * input_data['nh3_lag_1']
+        for col in ['co', 'no', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3']:
+            input_data[col] = recent_data[col]
 
         input_data = input_data[xgb_model.feature_names_in_]
 

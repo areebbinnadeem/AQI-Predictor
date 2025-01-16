@@ -6,8 +6,8 @@ import hopsworks
 from dotenv import load_dotenv
 import os
 import pandas as pd
-from preprocess import load_and_preprocess
-from feature_store.fetch_hopsworks_data import fetch_data_from_hopsworks
+from src.training.preprocess import remove_outliers, add_features, preprocess_data_with_lags
+from src.feature_store.fetch_hopsworks_data import fetch_data_from_hopsworks
 from src.app.exception import AppException
 from src.app.logger import get_logger
 
@@ -66,7 +66,11 @@ if __name__ == "__main__":
         hopsworks_api_key = os.getenv("HOPSWORKS_API_KEY")
 
         if not hopsworks_api_key:
-            raise AppException("HOPSWORKS_API_KEY not found in .env file!")
+            raise Exception("HOPSWORKS_API_KEY not set in .env or environment.")
+
+        # Log in to Hopsworks (API key automatically read from environment)
+        project = hopsworks.login()
+        logger.info("Successfully logged into Hopsworks.")
 
         # Fetch data from Hopsworks
         data_df = fetch_data_from_hopsworks()
@@ -75,8 +79,18 @@ if __name__ == "__main__":
 
         data_df['date'] = pd.to_datetime(data_df['date'])
 
+        # Remove outliers
+        pollutant_columns = ['co', 'no', 'no2', 'o3', 'so2', 'pm2_5', 'pm10', 'nh3']
+        data_df = remove_outliers(data_df, pollutant_columns)
+
+        # Add features
+        data_df = add_features(data_df)
+
+        # Drop rows with NaN values
+        data_df = data_df.dropna().sort_values(by='date').reset_index(drop=True)
+
         # Preprocess the data
-        X, y, scaler = load_and_preprocess(data_df)
+        X, y, scaler = preprocess_data_with_lags(data_df)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         # Train the XGBoost model
@@ -86,7 +100,6 @@ if __name__ == "__main__":
         evaluate_model(xgb_model, X_test, y_test, name="XGBoost")
 
         # Save the model to Hopsworks
-        project = hopsworks.login(api_key=hopsworks_api_key)
         model_registry = project.get_model_registry()
         model_name = "XGB_Model"
         description = "XGBoost model for AQI prediction"
@@ -106,3 +119,4 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error(f"Unexpected Error: {e}")
         print(f"Unexpected Error: {e}")
+
