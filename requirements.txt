@@ -1,4 +1,4 @@
---upgrade hopsworks
+hopsworks
 pandas
 numpy
 requests
