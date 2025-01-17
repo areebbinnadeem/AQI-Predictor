@@ -20,10 +20,6 @@ app = Flask(__name__)
 
 @app.route("/predict_aqi", methods=["GET"])
 def predict_aqi():
-    """
-    API Endpoint to get AQI predictions for the next 3 days.
-    Expects lat, lon as query parameters.
-    """
     try:
         lat = request.args.get("lat", type=float)
         lon = request.args.get("lon", type=float)
@@ -50,23 +46,25 @@ def predict_aqi():
 
 # Streamlit Frontend
 def streamlit_app():
-    """
-    Streamlit App for AQI dashboard.
-    """
     try:
         st.title("🌍 Air Quality Index (AQI) Predictor")
-        st.markdown("Real-time and forecasted AQI data with alerts for hazardous levels.")
+        st.markdown("Forecasted AQI data")
         
-        # Input: Latitude and Longitude
-        st.sidebar.header("Enter Location")
-        lat = st.sidebar.number_input("Latitude", value=24.8607, format="%.4f")
-        lon = st.sidebar.number_input("Longitude", value=67.0011, format="%.4f")
+        # Fixed Location: Karachi
+        st.sidebar.header("Location Information")
+        st.sidebar.markdown("**City**: Karachi")
+        st.sidebar.markdown("**Latitude**: 24.8607")
+        st.sidebar.markdown("**Longitude**: 67.0011")
+        
+        # Latitude and Longitude for API
+        lat = 24.8607
+        lon = 67.0011
 
         if st.sidebar.button("Get AQI Forecast"):
             with st.spinner("Fetching AQI predictions..."):
                 try:
                     # Fetch predictions
-                    logger.info(f"Fetching AQI predictions for lat={lat}, lon={lon}")
+                    logger.info(f"Fetching AQI predictions for Karachi (lat={lat}, lon={lon})")
                     predictions = predict_next_three_days_aqi(lat, lon)
                     
                     if predictions:
@@ -80,16 +78,16 @@ def streamlit_app():
                         for pred in predictions:
                             aqi = pred["Predicted_AQI"]
                             date = pred["Date"]
-                            if aqi >= 300:
-                                st.error(f"🚨 {date}: Hazardous AQI ({aqi})")
-                            elif 200 <= aqi < 300:
-                                st.warning(f"⚠️ {date}: Very Unhealthy AQI ({aqi})")
-                            elif 150 <= aqi < 200:
-                                st.warning(f"⚠️ {date}: Unhealthy AQI ({aqi})")
-                            elif 100 <= aqi < 150:
-                                st.info(f"🌬️ {date}: Moderate AQI ({aqi})")
-                            else:
-                                st.success(f"✅ {date}: Good AQI ({aqi})")
+                            if aqi == 5:
+                                st.error(f"🚨 {date}: AQI = {aqi} (Very Hazardous). Stay indoors and wear a mask!")
+                            elif aqi == 4:
+                                st.warning(f"⚠️ {date}: AQI = {aqi} (Unhealthy). Limit outdoor activities.")
+                            elif aqi == 3:
+                                st.warning(f"⚠️ {date}: AQI = {aqi} (Moderate). Sensitive groups should take precautions.")
+                            elif aqi == 2:
+                                st.info(f"🌬️ {date}: AQI = {aqi} (Good). Air quality is satisfactory.")
+                            elif aqi == 1:
+                                st.success(f"✅ {date}: AQI = {aqi} (Excellent). Enjoy the clean air!")
                     else:
                         raise AppException("Failed to fetch AQI predictions. Please try again!")
                 except AppException as e:
