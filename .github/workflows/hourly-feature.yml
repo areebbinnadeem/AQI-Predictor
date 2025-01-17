@@ -22,16 +22,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-      
 
-    - name: Fetch AQI Data
+    - name: Run Feature Script
       env:
         OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
-      run: |
-        python src/data_ingestion/fetch_aqi_data.py
-
-    - name: Upload Data to Hopsworks
-      env:
         HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
       run: |
+        python src/data_ingestion/fetch_aqi_data.py
         python src/data_ingestion/upload_hopsworks.py
