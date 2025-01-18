@@ -1,25 +1,23 @@
-# Base image
 FROM python:3.9-slim
 
-# Set the working directory
 WORKDIR /app
 
-# Copy dependencies files
-COPY requirements.txt /app/
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    build-essential && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
+# Copy requirements and install Python dependencies
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code
-COPY . /app/
+# Copy application code
+COPY . /src/
 
-# Expose the port for Streamlit
+# Expose port and specify default command
 EXPOSE 8501
+CMD ["streamlit", "run", "/src/app/dashboard.py"]
 
-# Environment variables
-ENV OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
-ENV HOPSWORKS_API_KEY=${HOPSWORKS_API_KEY}
-
-# Default command to run the Streamlit app
-CMD ["streamlit", "run", "src/app/dashboard.py", "--server.port=8501", "--server.enableCORS=false"]
