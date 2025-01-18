@@ -1,9 +1,9 @@
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
-from src.feature_store.fetch_hopsworks_data import fetch_data_from_hopsworks
-from src.app.exception import AppException 
-from src.app.logger import get_logger 
+from feature_store.fetch_hopsworks_data import fetch_data_from_hopsworks
+from app.exception import AppException 
+from app.logger import get_logger 
 
 logger = get_logger(__name__)
 

@@ -14,10 +14,12 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY . /src/
+# Copy the application code to the correct location
+COPY src /app/src
+
+# Add src to PYTHONPATH
+ENV PYTHONPATH="/app/src"
 
 # Expose port and specify default command
 EXPOSE 8501
-CMD ["streamlit", "run", "/src/app/dashboard.py"]
-
+CMD ["streamlit", "run", "/app/src/app/dashboard.py"]
