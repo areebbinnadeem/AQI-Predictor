@@ -3,8 +3,8 @@ import requests
 import pandas as pd
 from datetime import datetime
 from dotenv import load_dotenv
-from app.exception import AppException
-from app.logger import get_logger
+from src.app.exception import AppException
+from src.app.logger import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)

@@ -6,10 +6,10 @@ import hopsworks
 from dotenv import load_dotenv
 import os
 import pandas as pd
-from training.preprocess import remove_outliers, add_features, preprocess_data_with_lags
-from feature_store.fetch_hopsworks_data import fetch_data_from_hopsworks
-from app.exception import AppException
-from app.logger import get_logger
+from src.training.preprocess import remove_outliers, add_features, preprocess_data_with_lags
+from src.feature_store.fetch_hopsworks_data import fetch_data_from_hopsworks
+from src.app.exception import AppException
+from src.app.logger import get_logger
 
 logger = get_logger(__name__)
 
