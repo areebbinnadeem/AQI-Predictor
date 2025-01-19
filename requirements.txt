@@ -9,3 +9,4 @@ Streamlit
 python-dotenv
 confluent-kafka
 joblib
+-e .
