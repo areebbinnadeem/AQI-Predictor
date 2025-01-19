@@ -1,6 +1,6 @@
 import sys
 import logging
-from app.logger import get_logger
+from src.app.logger import get_logger
 
 logger = get_logger(__name__)
 
