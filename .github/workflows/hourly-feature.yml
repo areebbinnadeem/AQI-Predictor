@@ -27,6 +27,7 @@ jobs:
       env:
         OPENWEATHER_API_KEY: ${{ secrets.OPENWEATHER_API_KEY }}
         HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+        PYTHONPATH: ${{ github.workspace }}/src
       run: |
         python src/data_ingestion/fetch_aqi_data.py
         python src/data_ingestion/upload_hopsworks.py

@@ -26,6 +26,7 @@ jobs:
     - name: Fetch Latest Data from Hopsworks
       env:
         HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+        PYTHONPATH: ${{ github.workspace }}/src
       run: |
         python src/feature_store/fetch_hopsworks_data.py
 
@@ -36,5 +37,6 @@ jobs:
     - name: Train the Model
       env:
         HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+        PYTHONPATH: ${{ github.workspace }}/src
       run: |
         python src/training/train_model.py
