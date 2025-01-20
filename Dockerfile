@@ -1,6 +1,13 @@
 FROM python:3.9-slim
 
-WORKDIR /app
+# Set the PYTHONPATH environment variable
+ENV PYTHONPATH=/AQI-Predictor
+
+# Set the working directory inside the container
+WORKDIR /AQI-Predictor
+
+# Copy only necessary files for dependency installation
+COPY requirements.txt setup.py /AQI-Predictor/
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -9,17 +16,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt /app/
+# Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy the application code to the correct location
-COPY src /app/src
-
-# Add src to PYTHONPATH
-ENV PYTHONPATH="/app/src"
+# Copy the rest of the application code
+COPY . /AQI-Predictor/
 
 # Expose port and specify default command
 EXPOSE 8501
-CMD ["streamlit", "run", "/app/src/app/dashboard.py"]
+CMD ["streamlit", "run", "src/app/dashboard.py"]

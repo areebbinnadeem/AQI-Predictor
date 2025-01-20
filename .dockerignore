@@ -1,14 +1,21 @@
 # Exclude virtual environment
 venv/
-
-# Exclude Python cache files
 __pycache__/
 *.pyc
 
 # Exclude local environment files
 .env
 
-# Exclude Git and other unnecessary files
+# Exclude Git, logs, and temporary files
 .git
 .gitignore
 *.log
+*.csv
+*.h5
+*.pkl
+*.tar.gz
+*.zip
+
+# Exclude large datasets or artifacts
+data/
+models/
